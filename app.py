@@ -22,6 +22,7 @@ def login():
         st.write('用户名不存在！')
     password = st.text_input('密码：', type='password')
     if username and password and check_password(password, users[username]):
+        print("password correct!")
         return True
     elif username and password:
         st.write('密码错误！')
