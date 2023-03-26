@@ -35,7 +35,7 @@ class APP:
         if GetInput:
             input_text = st.text_input('', key=LoopTimeCount)
         if input_text:
-            self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {History}\n", encoding='utf-8'))
+            self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {[]}\n", encoding='utf-8'))
             time.sleep(5)
             response = self.ssh.recv(8192)
             response = eval(response.decode('utf-8').split('\r')[1][1:])
