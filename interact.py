@@ -1,5 +1,6 @@
 import streamlit as st
 import paramiko
+import time
 
 
 def connect(hostname, password, username, port):
@@ -15,12 +16,12 @@ class APP:
     def __init__(self):
         self.client = connect(st.secrets['hostname'], st.secrets['password'], st.secrets['username'],
                               st.secrets['port'])
-        self.ssh = self.client.get_transport().open_session()
+        self.ssh = self.client.get_transport().open_session(timeout=30)
         self.ssh.get_pty()
         self.ssh.invoke_shell()
         self.ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
-        out = self.ssh.recv(8192)
-        out.decode('utf-8')
+        time.sleep(5)
+        _ = self.ssh.recv(8192)
         st.title('iFA: 你的智能法律咨询顾问')
         self.SHARE = st.checkbox('与开发者共享聊天数据')
 
@@ -35,9 +36,9 @@ class APP:
             input_text = st.text_input('', key=LoopTimeCount)
         if input_text:
             self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {History}\n", encoding='utf-8'))
-            _ = self.ssh.recv(8192)
+            time.sleep(5)
             response = self.ssh.recv(8192)
-            response = eval(response.decode('utf-8')[:-2])
+            response = eval(response.decode('utf-8').split('\r')[1][1:])
             response, History = response['response'], response['history']
 
             st.code(response)
