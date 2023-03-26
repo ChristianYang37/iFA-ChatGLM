@@ -1,28 +1,49 @@
+# https://sysu-ifa.streamlit.app/
 import streamlit as st
 import paramiko
 import time
 
 
-def connect(hostname, password, username, port):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname=hostname, port=port, username=username, password=password)
-    return client
+class SSH:
+    def __init__(self, hostname, password, username, port):
+        self.client = paramiko.SSHClient()
+        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.client.connect(hostname=hostname, port=port, username=username, password=password)
+
+    def post(self, input_text, history):
+        ssh = self.client.get_transport().open_session()
+        ssh.get_pty()
+        ssh.invoke_shell()
+
+        ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
+        time.sleep(3)
+        _ = ssh.recv(8192)
+
+        s = ''
+        for record in history:
+            s += record[0] + '<STT>'
+            s += record[1] + '<STT>'
+        s = s[:-5]
+
+        ssh.send(bytes(f"python post.py --input_text {input_text} --history {s}\n", encoding='utf-8'))
+        time.sleep(3)
+        response = ssh.recv(8192)
+
+        print(response.decode('utf-8'))
+
+        response = eval(response.decode('utf-8').split('\r')[1][1:])
+        response, history = response['response'], response['history']
+
+        return response, history
 
 
 class APP:
     txt = ''
 
     def __init__(self):
-        self.client = connect(st.secrets['hostname'], st.secrets['password'], st.secrets['username'],
-                              st.secrets['port'])
-        self.ssh = self.client.get_transport().open_session(timeout=30)
-        self.ssh.get_pty()
-        self.ssh.invoke_shell()
-        self.ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
-        time.sleep(10)
-        _ = self.ssh.recv(8192)
-        st.title('iFA: 你的智能法律咨询顾问')
+        self.client = SSH(st.secrets['hostname'], st.secrets['password'], st.secrets['username'], st.secrets['port'])
+        # st.title('iFA: 你的智能法律咨询顾问')
+        st.title('Chat with ChatGLM-6B!')
         self.SHARE = st.checkbox('与开发者共享聊天数据')
 
     def loop(self):
@@ -33,13 +54,10 @@ class APP:
     def interact(self, LoopTimeCount, GetInput, History):
         input_text = ''
         if GetInput:
-            input_text = st.text_input('', key=LoopTimeCount)
+            input_text = st.text_input('请输入', key=LoopTimeCount)
         if input_text:
-            self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {[]}\n", encoding='utf-8'))
-            time.sleep(10)
-            response = self.ssh.recv(8192)
-            response = eval(response.decode('utf-8').split('\r')[1][1:])
-            response, History = response['response'], response['history']
+            print(input_text, History)
+            response, History = self.client.post(input_text, History)
 
             st.code(response)
 
