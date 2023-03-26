@@ -37,7 +37,7 @@ class APP:
             self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {History}\n", encoding='utf-8'))
             response = self.ssh.recv(2048)
             response = self.ssh.recv(2048)
-            response = eval(response.decode('utf-8').[:-2])
+            response = eval(response.decode('utf-8')[:-2])
             response, History = response['response'], response['history']
 
             st.code(response)
