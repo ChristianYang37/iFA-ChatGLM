@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 
-users = st.secrets
+users = {'iFA': '123456'}
 
 
 def check_password(inputs, password):
