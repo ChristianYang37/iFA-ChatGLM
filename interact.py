@@ -18,6 +18,9 @@ class APP:
         self.ssh = self.client.get_transport().open_session()
         self.ssh.get_pty()
         self.ssh.invoke_shell()
+        self.ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
+        out = self.ssh.recv(8192)
+        out.decode('utf-8')
         st.title('iFA: 你的智能法律咨询顾问')
         self.SHARE = st.checkbox('与开发者共享聊天数据')
 
@@ -31,8 +34,7 @@ class APP:
         if GetInput:
             input_text = st.text_input('', key=LoopTimeCount)
         if input_text:
-            self.ssh.send(bytes(f"cd ChatGLM-6B && python post.py --input_text {input_text} --history {History}\n",
-                                encoding='utf-8'))
+            self.ssh.send(bytes(f"python post.py --input_text {input_text} --history {History}\n", encoding='utf-8'))
             response = self.ssh.recv(2048)
             response = eval(response.decode('utf-8').split('\n')[1][:-1])
             response, History = response['response'], response['history']
