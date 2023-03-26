@@ -30,3 +30,7 @@ def login():
 def main():
     if login():
         os.system('streamlit run interact.py')
+
+
+if __name__ == '__main__':
+    main()
