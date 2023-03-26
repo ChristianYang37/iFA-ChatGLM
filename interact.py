@@ -30,6 +30,7 @@ class APP:
         if input_text:
             stdin, stdout, stderr = self.client.exec_command(
                 f"cd ChatGLM-6B && python post.py --input_text {input_text} --history {History}")
+            print(stdout.read().decode('utf-8'))
             response = eval(stdout.read().decode('utf-8'))
             response, History = response['response'], response['history']
 
