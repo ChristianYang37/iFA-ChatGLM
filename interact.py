@@ -43,7 +43,7 @@ class SSH:
 
         cmd = f"python post.py --file_name ./tmp/%s\n" % self.file[2:]
         ssh.send(bytes(cmd, encoding='utf-8'))
-        time.sleep(20)
+        time.sleep(30)
         response = ssh.recv(8192).decode('utf-8')
 
         print(response)
