@@ -2,6 +2,18 @@
 import streamlit as st
 import paramiko
 import time
+import random
+import pickle
+
+vocab = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
+
+
+def random_filename():
+    length = 8
+    s = ''
+    for _ in range(length):
+        s += random.choice(vocab)
+    return s
 
 
 class SSH:
@@ -9,24 +21,27 @@ class SSH:
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.client.connect(hostname=hostname, port=port, username=username, password=password)
+        self.file = './%s.pkl' % random_filename()
+        self.target_file = './ChatGLM-6B' + self.file[1:]
 
     def post(self, input_text, history):
-        ssh = self.client.get_transport().open_session()
+        transport = self.client.get_transport()
+
+        ssh = transport.open_session()
+
         ssh.get_pty()
         ssh.invoke_shell()
 
         ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
-        time.sleep(5)
+        time.sleep(10)
         _ = ssh.recv(8192)
 
-        s = ''
-        for record in history:
-            s += record[0] + 'STT'
-            s += record[1] + 'STT'
-        s = s[:-3]
+        param = {'input_text': input_text, 'history': history}
+        self.put(param, transport)
 
-        ssh.send(bytes(f"python post.py --input_text {input_text} --history {s}\n", encoding='utf-8'))
-        time.sleep(5)
+        cmd = f"python post.py --file_name %s\n" % self.file
+        ssh.send(bytes(cmd, encoding='utf-8'))
+        time.sleep(10)
         response = ssh.recv(8192)
 
         print(response.decode('utf-8'))
@@ -36,6 +51,25 @@ class SSH:
 
         return response, history
 
+    def put(self, param, transport):
+        with open(self.file, mode='wb') as file:
+            pickle.dump(param, file, True)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        sftp.put(self.file, self.target_file)
+
+    def __del__(self):
+        pass
+        # transport = self.client.get_transport()
+        #
+        # ssh = transport.open_session()
+        #
+        # ssh.get_pty()
+        # ssh.invoke_shell()
+        #
+        # ssh.send(bytes("rm -rf %s\n" % self.target_file, encoding='utf-8'))
+        # os.system("rm -rf %s\n" % self.file)
+        # self.client.close()
+
 
 class APP:
     txt = ''
@@ -44,7 +78,6 @@ class APP:
         self.client = SSH(st.secrets['hostname'], st.secrets['password'], st.secrets['username'], st.secrets['port'])
         # st.title('iFA: 你的智能法律咨询顾问')
         st.title('Chat with ChatGLM-6B!')
-        self.SHARE = st.checkbox('与开发者共享聊天数据')
 
     def loop(self):
         chat_state = {'LoopTimeCount': 0, 'GetInput': True, 'History': []}
@@ -54,24 +87,17 @@ class APP:
     def interact(self, LoopTimeCount, GetInput, History):
         input_text = ''
         if GetInput:
-            input_text = st.text_input('请输入', key=LoopTimeCount)
+            input_text = st.text_input('', key=LoopTimeCount)
         if input_text:
             print(input_text, History)
             response, History = self.client.post(input_text, History)
 
             st.code(response)
 
-            if self.SHARE:
-                self.record(input_text, response)
-
             del input_text
         else:
             GetInput = False
         return {'LoopTimeCount': LoopTimeCount + 1, 'GetInput': GetInput, 'History': History}
-
-    def record(self, input_text, response):
-        self.txt += f'ASK: {input_text}\n'
-        self.txt += f'ANSWER: {response}\n\n'
 
 
 if __name__ == '__main__':
