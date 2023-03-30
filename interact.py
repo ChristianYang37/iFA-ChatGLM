@@ -16,17 +16,17 @@ class SSH:
         ssh.invoke_shell()
 
         ssh.send(bytes("cd ChatGLM-6B\n", encoding='utf-8'))
-        time.sleep(3)
+        time.sleep(5)
         _ = ssh.recv(8192)
 
         s = ''
         for record in history:
             s += record[0] + 'STT'
             s += record[1] + 'STT'
-        s = s[:-5]
+        s = s[:-3]
 
         ssh.send(bytes(f"python post.py --input_text {input_text} --history {s}\n", encoding='utf-8'))
-        time.sleep(3)
+        time.sleep(5)
         response = ssh.recv(8192)
 
         print(response.decode('utf-8'))
