@@ -21,8 +21,8 @@ class SSH:
 
         s = ''
         for record in history:
-            s += record[0] + '<STT>'
-            s += record[1] + '<STT>'
+            s += record[0] + 'STT'
+            s += record[1] + 'STT'
         s = s[:-5]
 
         ssh.send(bytes(f"python post.py --input_text {input_text} --history {s}\n", encoding='utf-8'))
