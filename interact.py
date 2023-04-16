@@ -68,7 +68,7 @@ class APP:
     def __init__(self):
         self.client = SSH(st.secrets['hostname'], st.secrets['password'], st.secrets['username'], st.secrets['port'])
         st.title('iFA: 你的智能法律咨询顾问')
-        
+
         if 'history' not in st.session_state:
             st.session_state['history'] = []
 
@@ -86,6 +86,7 @@ class APP:
         send = st.button('发送', on_click=self.click_text)
         if not send:
             return
+        print(input_text)
 
         response, st.session_state['history'] = self.client.post(input_text, st.session_state['history'])
         for record in st.session_state['history']:
@@ -100,4 +101,3 @@ class APP:
 if __name__ == '__main__':
     app = APP()
     app.loop()
-
