@@ -6,25 +6,12 @@ import time
 import random
 import pickle
 
-vocab = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
-
-
-def random_filename():
-    length = 8
-    s = ''
-    for _ in range(length):
-        s += random.choice(vocab)
-    return s
-
 
 class SSH:
     def __init__(self, hostname, password, username, port):
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.client.connect(hostname=hostname, port=port, username=username, password=password)
-
-        self.file = './%s.pkl' % random_filename()
-        self.target_file = './ChatGLM-6B/tmp' + self.file[1:]
 
     def post(self, input_text, history):
         transport = self.client.get_transport()
@@ -39,9 +26,9 @@ class SSH:
         _ = ssh.recv(8192)
 
         param = {'input_text': input_text, 'history': history}
-        self.put(param, transport)
+        file = self.put(param, transport)
 
-        cmd = f"python post.py --file_name ./tmp/%s\n" % self.file[2:]
+        cmd = f"python post.py --file_name ./tmp/%s\n" % file[2:]
         ssh.send(bytes(cmd, encoding='utf-8'))
         time.sleep(30)
         response = ssh.recv(8192).decode('utf-8')
@@ -54,38 +41,57 @@ class SSH:
         return response, history
 
     def put(self, param, transport):
-        with open(self.file, mode='wb') as file:
+        local_file = './%s.pkl' % self.random_filename()
+        target_file = './ChatGLM-6B/tmp' + local_file[1:]
+
+        with open(local_file, mode='wb') as file:
             pickle.dump(param, file, True)
+
         sftp = paramiko.SFTPClient.from_transport(transport)
-        sftp.put(self.file, self.target_file)
-        os.remove(self.file)
+        sftp.put(local_file, target_file)
+
+        os.remove(local_file)
+
+        return local_file
+
+    vocab = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
+
+    def random_filename(self, ):
+        length = 8
+        s = ''
+        for _ in range(length):
+            s += random.choice(self.vocab)
+        return s
 
 
 class APP:
     def __init__(self):
         self.client = SSH(st.secrets['hostname'], st.secrets['password'], st.secrets['username'], st.secrets['port'])
-        # st.title('iFA: 你的智能法律咨询顾问')
-        st.title('Chat with ChatGLM-6B!')
+        st.title('iFA: 你的智能法律咨询顾问')
 
     def loop(self):
-        chat_state = {'LoopTimeCount': 0, 'GetInput': True, 'History': []}
-        while True:
-            chat_state = self.interact(**chat_state)
+        container = st.container()
 
-    def interact(self, LoopTimeCount, GetInput, History):
-        input_text = ''
-        if GetInput:
-            input_text = st.text_input('', key=LoopTimeCount)
-        if input_text:
-            print(input_text, History)
-            response, History = self.client.post(input_text, History)
+        input_text = st.text_input(
+            "text",
+            label_visibility="visible",
+            disabled=False,
+            placeholder="Just Type...",
+            key="text"
+        )
 
-            st.code(response)
+        send = st.button('发送', on_click=self.click_text)
+        if not send:
+            return
 
-            del input_text
-        else:
-            GetInput = False
-        return {'LoopTimeCount': LoopTimeCount + 1, 'GetInput': GetInput, 'History': History}
+        response, st.session_state['history'] = self.client.post(input_text, st.session_state['history'])
+        for record in st.session_state['history']:
+            container.code(record[0])
+            container.code(record[1])
+
+    @staticmethod
+    def click_text():
+        st.session_state["text"] = ""
 
 
 if __name__ == '__main__':
