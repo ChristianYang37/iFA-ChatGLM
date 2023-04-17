@@ -45,7 +45,7 @@ class SSH:
         response = eval(response.split('\r')[1][1:])
         response, history = response['response'], response['history']
 
-        return response, history
+        return response
 
     def put(self, param, transport):
         local_file = './%s.pkl' % self.random_filename()
@@ -99,8 +99,8 @@ class APP:
         st.session_state['responses'].append(self.client.post(text, history))
 
         for prompt, response in zip(st.session_state['prompts'], st.session_state['responses']):
-            self.container.code('你：\n\t%s' % prompt)
-            self.container.code('iFA：\n\t%s' % response)
+            self.container.code('你：\n\t' + prompt)
+            self.container.code('iFA：\n\t' + response)
 
         st.session_state['text'] = ''
 
