@@ -7,6 +7,13 @@ import random
 import pickle
 
 
+def st_init():
+    if 'prompts' not in st.session_state:
+        st.session_state['prompts'] = []
+    if 'responses' not in st.session_state:
+        st.session_state['responses'] = []
+
+
 class SSH:
     def __init__(self, hostname, password, username, port):
         self.client = paramiko.SSHClient()
@@ -57,7 +64,7 @@ class SSH:
     vocab = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
 
     def random_filename(self, ):
-        length = 8
+        length = 16
         s = ''
         for _ in range(length):
             s += random.choice(self.vocab)
@@ -66,38 +73,42 @@ class SSH:
 
 class APP:
     def __init__(self):
+        st_init()
         self.client = SSH(st.secrets['hostname'], st.secrets['password'], st.secrets['username'], st.secrets['port'])
         st.title('iFA: 你的智能法律咨询顾问')
-
-        if 'history' not in st.session_state:
-            st.session_state['history'] = []
+        self.container = st.container()
 
     def loop(self):
-        container = st.container()
-
-        input_text = st.text_input(
+        form = st.form('input_area')
+        input_text = form.text_input(
             "",
             label_visibility="visible",
             disabled=False,
             placeholder="Just Type...",
             key="text"
         )
-
-        send = st.button('发送', on_click=self.click_text)
-        if not send:
-            return
         print(input_text)
 
-        response, st.session_state['history'] = self.client.post(input_text, st.session_state['history'])
-        for record in st.session_state['history']:
-            container.code(record[0])
-            container.code(record[1])
+        form.form_submit_button('发送', on_click=self.send_and_response, use_container_width=True)
 
-    @staticmethod
-    def click_text():
-        st.session_state["text"] = ""
+    def send_and_response(self):
+        text = st.session_state['text']
+        st.session_state['prompts'].append(text)
+        history = [[prompt, response] for prompt, response in
+                   zip(st.session_state['prompts'], st.session_state['responses'])]
+        st.session_state['responses'].append(self.client.post(text, history))
+
+        for prompt, response in zip(st.session_state['prompts'], st.session_state['responses']):
+            self.container.code('你：\n\t%s' % prompt)
+            self.container.code('iFA：\n\t%s' % response)
+
+        st.session_state['text'] = ''
+
+
+def main():
+    app = APP()
+    app.loop()
 
 
 if __name__ == '__main__':
-    app = APP()
-    app.loop()
+    main()
