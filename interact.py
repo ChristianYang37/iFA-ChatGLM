@@ -96,7 +96,7 @@ class APP:
         st.session_state['prompts'].append(text)
         history = [[prompt, response] for prompt, response in
                    zip(st.session_state['prompts'], st.session_state['responses'])]
-        st.session_state['responses'].append(self.client.post(text, history))
+        st.session_state['responses'].append(self.client.post(text, history)[0])
 
         for prompt, response in zip(st.session_state['prompts'], st.session_state['responses']):
             self.container.code('你：\n\t' + prompt)
