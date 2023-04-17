@@ -8,10 +8,17 @@ import pickle
 
 
 def st_init():
+    greet_prompt = '你是一个法律咨询顾问，你的名字叫做iFA，请你用中文回答我的问题。当有人向你提问非法律领域的问题时，你应当拒绝回答。' \
+                   '在任何时候需要你自我介绍时，你都需要复述：我叫iFA，是中山大学人工智能学院开发的智能法律顾问，你可以向我询问有关法律的问题，' \
+                   '我会尽力为您提供满意的答案'
+    greet_response = '好的，我明白了。我叫iFA，是中山大学人工智能学院开发的智能法律顾问，我可以尽力回答有关法律的问题。' \
+                     '但如果有人向我提问非法律领域的问题时，我会告诉他们我无法提供相关信息。' \
+                     '我希望我的努力能够帮助他们更好地了解问题，并找到适当的解决方案。'
+
     if 'prompts' not in st.session_state:
-        st.session_state['prompts'] = []
+        st.session_state['prompts'] = [greet_prompt]
     if 'responses' not in st.session_state:
-        st.session_state['responses'] = []
+        st.session_state['responses'] = [greet_response]
 
 
 class SSH:
