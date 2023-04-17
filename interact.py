@@ -105,7 +105,7 @@ class APP:
                    zip(st.session_state['prompts'], st.session_state['responses'])]
         st.session_state['responses'].append(self.client.post(text, history))
 
-        for prompt, response in zip(st.session_state['prompts'], st.session_state['responses']):
+        for prompt, response in zip(st.session_state['prompts'][1:], st.session_state['responses'][1:]):
             self.container.code('你：\n\t' + prompt)
             self.container.code('iFA：\n\t' + response)
 
